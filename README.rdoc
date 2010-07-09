@@ -4,8 +4,8 @@ Don't want to reinvent the wheel to use a websocket? Don't. Use your existing tc
 
 == Getting Started
 
-gem install em-websocket-proxy
-em-websocket-proxy -p 8080 -r localhost -q 80
+ * gem install em-websocket-proxy
+ * em-websocket-proxy -p 8080 -r localhost -q 80
 
 == License
 
