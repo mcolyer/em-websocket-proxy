@@ -1,6 +1,34 @@
+#!/usr/bin/env ruby
+require 'optparse'
+
 require 'rubygems'
 require 'eventmachine'
 require 'em-websocket'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: em-websocket-proxy [options]"
+
+  opts.on("-p", "--port [PORT]", "Port to listen for Websocket connections") do |port|
+    options[:port] = port
+  end
+
+  opts.on("-r", "--remote-host [HOST]", "Host to proxy to") do |host|
+    options[:remote_host] = host
+  end
+
+  opts.on("-q", "--remote-port [PORT]", "Port to proxy to") do |port|
+    options[:remote_port] = port
+  end
+end.parse!
+
+required_opts = [:port, :remote_host, :remote_port]
+required_opts.each do |opt|
+  unless options.has_key? opt
+    puts "Required option --#{opt.to_s.gsub("_", "-")} missing. Use -h for details."
+    exit(-1)
+  end
+end
 
 EventMachine.run {
 
@@ -26,7 +54,7 @@ EventMachine.run {
       end
   end
 
-  EventMachine::WebSocket.start(:host => "0.0.0.0", :port => 8080) do |ws|
+  EventMachine::WebSocket.start(:host => "0.0.0.0", :port => options[:port]) do |ws|
     ws.onopen {
       output = EM::Channel.new
       input = EM::Channel.new
@@ -35,7 +63,7 @@ EventMachine.run {
 
       output_sid = output.subscribe { |msg| ws.send msg }
       server_close_sid = server_close.subscribe { |msg| ws.close_connection }
-      EventMachine::connect '127.0.0.1', 80, Server, input, output, server_close, client_close
+      EventMachine::connect options[:remote_host], options[:remote_port], Server, input, output, server_close, client_close
 
       ws.onmessage { |msg| input.push(msg)}
 

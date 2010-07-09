@@ -2,7 +2,11 @@
 
 Don't want to reinvent the wheel to use a websocket? Don't. Use your existing tcp servers, with this simple proxy.
 
-= License
+== Getting Started
+
+em-websocket-proxy -p 8080 -r localhost -q 80
+
+== License
 
 (The MIT License)
 
