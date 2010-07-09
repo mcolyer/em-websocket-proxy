@@ -26,8 +26,8 @@ Gem::Specification.new do |s|
   ## better to set the email to an email list or something. If you don't have
   ## a custom homepage, consider using your GitHub URL or the like.
   s.authors  = ["Matt Colyer"]
-  s.email    = 'matt@nospam.colyer.name'
-  s.homepage = 'http://matt.colyer.name'
+  s.email    = 'matt.removethis@nospam.colyer.name'
+  s.homepage = 'http://github.com/mcolyer/em-websocket-proxy'
 
   ## This gets added to the $LOAD_PATH so that 'lib/NAME.rb' can be required as
   ## require 'NAME.rb' or'/lib/NAME/file.rb' can be as require 'NAME/file.rb'
