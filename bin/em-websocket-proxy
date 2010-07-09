@@ -1,0 +1,49 @@
+require 'rubygems'
+require 'eventmachine'
+require 'em-websocket'
+
+EventMachine.run {
+
+  class Server < EventMachine::Connection
+      def initialize(input, output, server_close, client_close)
+        @input = input
+        @output = output
+        @server_close = server_close
+        @client_close = client_close
+
+        @input_sid = @input.subscribe { |msg| send_data msg }
+        @client_close_sid = @client_close.subscribe { |msg| close_connection }
+      end
+
+      def receive_data(data)
+        @output.push(data)
+      end
+
+      def unbind
+        @server_close.push("exit")
+        @input.unsubscribe(@input_sid)
+        @client_close.unsubscribe(@client_close_sid)
+      end
+  end
+
+  EventMachine::WebSocket.start(:host => "0.0.0.0", :port => 8080) do |ws|
+    ws.onopen {
+      output = EM::Channel.new
+      input = EM::Channel.new
+      server_close = EM::Channel.new
+      client_close = EM::Channel.new
+
+      output_sid = output.subscribe { |msg| ws.send msg }
+      server_close_sid = server_close.subscribe { |msg| ws.close_connection }
+      EventMachine::connect '127.0.0.1', 80, Server, input, output, server_close, client_close
+
+      ws.onmessage { |msg| input.push(msg)}
+
+      ws.onclose {
+        output.unsubscribe(output_sid)
+        server_close.unsubscribe(server_close_sid)
+        client_close.push("exit")
+      }
+    }
+  end
+}
