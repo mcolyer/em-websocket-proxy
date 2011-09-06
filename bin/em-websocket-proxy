@@ -24,12 +24,11 @@ OptionParser.new do |opts|
   end
   
   opts.on("-k", "--key [KEY]", "Private Key") do |key|
-    puts key
-    tls_options[:private_key_file] = "/Users/jeremy/twotoasters/AutonetMobile/test-server/cert/server.key"
+    tls_options[:private_key_file] = key
   end
   
   opts.on("-c", "--cert [CERT]", "Certificate") do |cert|
-    tls_options[:cert_chain_file] = "/Users/jeremy/twotoasters/AutonetMobile/test-server/cert/server.crt"
+    tls_options[:cert_chain_file] = cert
   end
   
   opts.on("-t", "--use-tls", "Use TLS for all connections") do |t|
