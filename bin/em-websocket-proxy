@@ -54,9 +54,6 @@ required_opts.each do |opt|
   end
 end
 
-# This is so that options is not out of scope in post_init.
-@@options = options
-
 ws_options = {:host => "0.0.0.0", :port => options[:port]}
 if (options[:use_tls_local])
   ws_options[:tls_options] = tls_options
@@ -64,6 +61,17 @@ if (options[:use_tls_local])
 end
 
 class Server < EventMachine::Connection
+    
+    @@options = {}
+    
+    def self.options
+      @@options
+    end
+    
+    def self.options=(opts)
+      @@options = opts
+    end
+    
     def initialize(input, output, server_close, client_close)
       super
       @input = input
@@ -76,8 +84,7 @@ class Server < EventMachine::Connection
     end
 
     def post_init
-      if (@@options[:use_tls_remote])
-        puts "Starting TLS"
+      if (Server.options[:use_tls_remote])
         start_tls
       end
     end
@@ -92,11 +99,10 @@ class Server < EventMachine::Connection
       @client_close.unsubscribe(@client_close_sid)
     end
     
-    def ssl_handshake_completed
-      puts get_peer_cert
-      puts "Handshake Complete"
-    end
 end
+
+# This is so that options is not out of scope in post_init.
+Server.options = options
 
 EventMachine.run {
 
