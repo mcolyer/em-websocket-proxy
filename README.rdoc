@@ -7,6 +7,9 @@ Don't want to reinvent the wheel to use a websocket? Don't. Use your existing tc
  * gem install em-websocket-proxy
  * em-websocket-proxy -p 8080 -r localhost -q 80
 
+== Secure Communication
+ * em-websocket-proxy -p 8080 -r localhost -q 80 --use-tls --key "cert/server.key" --cert "cert/server.crt"
+
 == License
 
 (The MIT License)
