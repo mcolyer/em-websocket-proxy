@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   ## the sub! line in the Rakefile
   s.name              = 'em-websocket-proxy'
   s.version           = '0.1.2'
-  s.date              = '2010-07-08'
+  s.date              = '2011-09-14'
   s.rubyforge_project = 'em-websocket-proxy'
 
   ## Make sure your summary is short. The description may be as long

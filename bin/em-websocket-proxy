@@ -6,6 +6,8 @@ require 'eventmachine'
 require 'em-websocket'
 
 options = {}
+tls_options = {}
+
 OptionParser.new do |opts|
   opts.banner = "Usage: em-websocket-proxy [options]"
 
@@ -20,6 +22,28 @@ OptionParser.new do |opts|
   opts.on("-q", "--remote-port [PORT]", "Port to proxy to") do |port|
     options[:remote_port] = port
   end
+  
+  opts.on("-k", "--key [KEY]", "Private Key") do |key|
+    tls_options[:private_key_file] = key
+  end
+  
+  opts.on("-c", "--cert [CERT]", "Certificate") do |cert|
+    tls_options[:cert_chain_file] = cert
+  end
+  
+  opts.on("-t", "--use-tls", "Use TLS for all connections") do |t|
+    options[:use_tls_remote] = true
+    options[:use_tls_local] = true
+  end
+  
+  opts.on("--use-tls-remote", "Use TLS for the connection to the remote-host") do
+    options[:use_tls_remote] = true
+  end
+  
+  opts.on("--use-tls-local", "Use TLS for the local connection. Requires crt and key.") do
+    options[:use_tls_local] = true
+  end
+  
 end.parse!
 
 required_opts = [:port, :remote_host, :remote_port]
@@ -30,31 +54,59 @@ required_opts.each do |opt|
   end
 end
 
+ws_options = {:host => "0.0.0.0", :port => options[:port]}
+if (options[:use_tls_local])
+  ws_options[:tls_options] = tls_options
+  ws_options[:secure] = true
+end
+
+class Server < EventMachine::Connection
+    
+    @@options = {}
+    
+    def self.options
+      @@options
+    end
+    
+    def self.options=(opts)
+      @@options = opts
+    end
+    
+    def initialize(input, output, server_close, client_close)
+      super
+      @input = input
+      @output = output
+      @server_close = server_close
+      @client_close = client_close
+
+      @input_sid = @input.subscribe { |msg| send_data msg }
+      @client_close_sid = @client_close.subscribe { |msg| close_connection }
+    end
+
+    def post_init
+      if (Server.options[:use_tls_remote])
+        start_tls
+      end
+    end
+
+    def receive_data(data)
+      @output.push(data)
+    end
+
+    def unbind
+      @server_close.push("exit")
+      @input.unsubscribe(@input_sid)
+      @client_close.unsubscribe(@client_close_sid)
+    end
+    
+end
+
+# This is so that options is not out of scope in post_init.
+Server.options = options
+
 EventMachine.run {
 
-  class Server < EventMachine::Connection
-      def initialize(input, output, server_close, client_close)
-        @input = input
-        @output = output
-        @server_close = server_close
-        @client_close = client_close
-
-        @input_sid = @input.subscribe { |msg| send_data msg }
-        @client_close_sid = @client_close.subscribe { |msg| close_connection }
-      end
-
-      def receive_data(data)
-        @output.push(data)
-      end
-
-      def unbind
-        @server_close.push("exit")
-        @input.unsubscribe(@input_sid)
-        @client_close.unsubscribe(@client_close_sid)
-      end
-  end
-
-  EventMachine::WebSocket.start(:host => "0.0.0.0", :port => options[:port]) do |ws|
+  EventMachine::WebSocket.start(ws_options) do |ws|
     ws.onopen {
       output = EM::Channel.new
       input = EM::Channel.new
@@ -63,6 +115,7 @@ EventMachine.run {
 
       output_sid = output.subscribe { |msg| ws.send msg }
       server_close_sid = server_close.subscribe { |msg| ws.close_connection }
+      
       EventMachine::connect options[:remote_host], options[:remote_port], Server, input, output, server_close, client_close
 
       ws.onmessage { |msg| input.push(msg)}
