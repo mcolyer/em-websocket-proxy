@@ -23,6 +23,10 @@ OptionParser.new do |opts|
     options[:remote_port] = port
   end
   
+  opts.on("-u", "--unix-socket [UNIX_SOCKET]", "Unix domain socket to proxy to") do |unix|
+    options[:unix_socket] = unix
+  end
+
   opts.on("-k", "--key [KEY]", "Private Key") do |key|
     tls_options[:private_key_file] = key
   end
@@ -47,10 +51,12 @@ OptionParser.new do |opts|
 end.parse!
 
 required_opts = [:port, :remote_host, :remote_port]
-required_opts.each do |opt|
-  unless options.has_key? opt
-    puts "Required option --#{opt.to_s.gsub("_", "-")} missing. Use -h for details."
-    exit(-1)
+unless options.has_key? :unix_socket
+  required_opts.each do |opt|
+    unless options.has_key? opt
+      puts "Required option --#{opt.to_s.gsub("_", "-")} missing. Use -h for details."
+      exit(-1)
+    end
   end
 end
 
@@ -116,7 +122,11 @@ EventMachine.run {
       output_sid = output.subscribe { |msg| ws.send msg }
       server_close_sid = server_close.subscribe { |msg| ws.close_connection }
       
-      EventMachine::connect options[:remote_host], options[:remote_port], Server, input, output, server_close, client_close
+      if options.has_key? :unix_socket
+        EM.connect_unix_domain options[:unix_socket], Server, input, output, server_close, client_close
+      else
+        EventMachine::connect options[:remote_host], options[:remote_port], Server, input, output, server_close, client_close
+      end
 
       ws.onmessage { |msg| input.push(msg)}
 
